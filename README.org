@@ -1,20 +1,20 @@
 * LC - Light Command
 ** USAGE
-Simply write the target brightness integer.
+To set the target brightness (as an integer).
 #+begin_src
 # lc device brightness
 #+end_src
 *Finding devices*: lc will tell you the names of devices on failure,
-but if you would like to know yourself, simply run:
+but if you would like to find it yourself, simply run:
 #+begin_src bash
 $ ls /sys/class/backlight/
 #+end_src
-*Notice*: the brightness is a percentage, so 100 -> 100%,
-not a direct write value to the device.
+*Notice*: the brightness is a percentage, so 100 -> 100% brightness,
+50 -> 50% brightness etc...
 ** BUILD
 #+begin_src bash
 $ make
 #+end_src
 ** INSTALL
-Simply but the =lc= file into your path, or a folder in your path.
+Simply put the =lc= file into your path, or a folder in your path.
 
