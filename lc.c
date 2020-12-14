@@ -14,43 +14,73 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
+#define MAXPATHLENGTH 128
 
 #include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <errno.h>
 
-int main(int argc, char *argv[]) {
-  if (argc == 3) {
-    char *pre = "/sys/class/backlight/";
-    char basepath[64] = {0};
-    char maxpath[128] = {0};
-    char brightpath[128] = {0};
-    strcpy(basepath, pre);
-    strcat(basepath, argv[1]);
-    strcat(maxpath, basepath);
-    strcat(brightpath, basepath);
-    strcat(maxpath, "/max_brightness");
-    strcat(brightpath, "/brightness");
-
-    FILE *m_fp = fopen(maxpath, "r");
-    FILE *b_fp = fopen(brightpath, "w");
-    char buff[255 * 5];
-
-    assert(0 < fscanf(m_fp, "%s", buff));
-
-    int t_b = atoi(argv[2]);
-    int m_b = atoi(buff);
-
-    assert(0 < fprintf(b_fp, "%d", t_b * (m_b / 100)));
-
-    assert(0 == fclose(m_fp));
-    assert(0 == fclose(b_fp));
-    return EXIT_SUCCESS;
-  }
-  printf("Usage: %s device 100\n", argv[0]);
+void print_help(){
+  printf("Usage: lc <device> <brighness>\n");
+  printf("Where brightness is a percentage of max(e.g. 1-100)\n");
   printf("#DEVICES#\n");
   system("ls /sys/class/backlight/\n");
-
-  return EXIT_FAILURE;
 }
+
+int main(int argc, char *argv[]) {
+  // Reduce complexity by early exit
+  if (argc != 3) {
+    printf("Not enough arguments provided\n");
+    print_help();
+    return EXIT_FAILURE;
+  }
+  int t_b = atoi(argv[2]);
+  if (t_b == 0 || t_b > 100){
+    printf("Invalid brightness argument\n");
+    print_help();
+    return EXIT_FAILURE;
+  }
+
+  char *pre = "/sys/class/backlight/";
+  // Declare neccesary variables
+  char basepath[MAXPATHLENGTH];
+  char maxpath[MAXPATHLENGTH];
+  char brightpath[MAXPATHLENGTH];
+  strcpy(basepath, pre); // This is safe. PRE is of known length
+  // User input, validate length
+  strncat(basepath, argv[1], MAXPATHLENGTH - strlen(pre) - 1);
+  strncat(maxpath, basepath, MAXPATHLENGTH - 1);
+  strncat(brightpath, basepath, MAXPATHLENGTH - 1);
+  // Not really safe, but not exploitable either. Will just crash if length
+  // exceeds
+  strcat(maxpath, "/max_brightness");
+  strcat(brightpath, "/brightness");
+
+  FILE *m_fp = fopen(maxpath, "r");
+  if (m_fp == NULL){// Probably permissions error
+    printf("Error in open Max file: %s\n", strerror(errno));
+    return errno;
+  }
+  FILE *b_fp = fopen(brightpath, "w");
+  if (b_fp == NULL){// Probably permissions error
+    printf("Error in open brightness file: %s\n", strerror(errno));
+    return errno;
+  }
+
+  int m_b;
+  assert(0 < fscanf(m_fp, "%d", &m_b));
+  // Calculate brightness as a percentage of max
+  int calculated_brightness = t_b * (m_b / 100);
+  int err = fprintf(b_fp, "%d", calculated_brightness);
+  if (err == 0){
+    printf("Error in writing brightness file: %s\n", strerror(errno));
+    return EXIT_FAILURE;
+  }
+  // Again, these shouldn't really fail, but error handling could be improved
+  assert(0 == fclose(m_fp));
+  assert(0 == fclose(b_fp));
+  return EXIT_SUCCESS;
+}
+// vim: noai:ts=2:sw=2
