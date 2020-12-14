@@ -1,6 +1,10 @@
+CC=gcc
+CFLAGS=-O3 -march=native -std=c11 -Wall -Wno-stringop-truncation
+lc: lc.c
+	$(CC) -o lc $(CFLAGS) $<
 
-all: lc.c
-	gcc lc.c -o lc -O3 -march=native
+debug-lc: lc.c
+	$(CC) -o lc-debug -Og -g $<
 
 clean:
 	$(RM) lc
