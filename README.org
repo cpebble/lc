@@ -1,0 +1,6 @@
+* LC - Light Command
+** USAGE
+# lc device brightness
+** BUILD
+Just run Make
+
