@@ -45,9 +45,9 @@ int main(int argc, char *argv[]) {
 
   char *pre = "/sys/class/backlight/";
   // Declare neccesary variables
-  char basepath[MAXPATHLENGTH];
-  char maxpath[MAXPATHLENGTH];
-  char brightpath[MAXPATHLENGTH];
+  char basepath[MAXPATHLENGTH] = {0};
+  char maxpath[MAXPATHLENGTH] = {0};
+  char brightpath[MAXPATHLENGTH] = {0};
   strcpy(basepath, pre); // This is safe. PRE is of known length
   // User input, validate length
   strncat(basepath, argv[1], MAXPATHLENGTH - strlen(pre) - 1);
@@ -60,7 +60,10 @@ int main(int argc, char *argv[]) {
 
   FILE *m_fp = fopen(maxpath, "r");
   if (m_fp == NULL){// Probably permissions error
-    printf("Error in open Max file: %s\n", strerror(errno));
+    printf("Error in open Max file[%s]: %s\n",
+           maxpath,
+           strerror(errno)
+           );
     return errno;
   }
   FILE *b_fp = fopen(brightpath, "w");
