@@ -1,6 +1,6 @@
 * LC - Light Command
 ** NOTICE
-THIS RELEASE IS NOT READY TO BE SETUID!
+THIS RELEASE IS HOPEFULLY READY TO BE SETUID!
 ** USAGE
 To set the target brightness (as an integer).
 #+begin_src
