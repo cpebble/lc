@@ -17,17 +17,23 @@
 
 #define MAXPATHLENGTH 128
 
-// GNU Coreutils ls is lowercase and has command at start
+// GNU coreutils style, take inspiration from ls
 #define OPEN_ERR "%s: cannot open %s: %s\n"
 #define WRITE_ERR "%s: cannot write %s: %s\n"
 #define ARG_ERR "%s: %s: %s\n"
 
-#include <assert.h>
-#include <errno.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
+#include <assert.h> // for assert
+#include <errno.h>  // for errno, strerror
+#include <stdio.h>  // for printf, etc...
+#include <stdlib.h> // for EXIT_FAILURE, EXIT_SUCCESS, etc...
+#include <string.h> // for strcat, strcpy
 
+/*
+ * synopsis: prints some help to the user
+ *
+ * FIXME no --help parsing
+ * TODO consider if the placement of ls is appropriate
+ * */
 void print_help() {
   printf("Usage: lc <device> <brighness>\n");
   printf("Where brightness is a integer percentage of max(e.g. 1-100)\n");
@@ -35,43 +41,72 @@ void print_help() {
   system("ls /sys/class/backlight/\n");
 }
 
+/*
+ * synopsis: generic file error function
+ *
+ * err:      the error "type"                   (char *)
+ * argv0:    the command name                   (char *)
+ * fstr:     the path of file being operated on (char *)
+ * errstr:   the operation error                (char *)
+ *
+ * return:   EXIT_FALURE
+ *
+ * desc: Takes a predefined error string (containing formatting for three
+ * strings), and inserts the arguments argv[0] (should be calling command),
+ * fstr (path of file), and errstr (the error, likely from errstring(errno)).
+ * Then prints this formatted string to stderr, and exits with EXIT_FAILURE.
+ */
 void ferr(char *err, char *argv0, char *fstr, char *errstr) {
   fprintf(stderr, err, argv0, fstr, errstr);
   exit(EXIT_FAILURE);
 }
 
+/*
+ * synopsis:   generic arguments error function
+ *
+ * err:        the error "type"    (char *),
+ * argv0:      the command name    (char *)
+ * errmsg:     the error           (char *)
+ * more:       further information (char *)
+ *
+ * return:     EXIT_FALURE
+ *
+ * desc: Takes a predefined error string (containing formatting for three
+ * strings), and inserts the arguments argv[0] (should be calling command),
+ * errmsg (the error as human readable string), and more (containing a small
+ * tip about the error).Then prints this formatted string to stderr, and exits
+ * with EXIT_FAILURE.
+ */
 void argerr(char *err, char *argv0, char *errmsg, char *more) {
   fprintf(stderr, ARG_ERR, argv0, errmsg, more);
-  // print_help();
   exit(EXIT_FAILURE);
 }
 
 int main(int argc, char *argv[]) {
-  // Reduce complexity by early exit
+  // CHECK INPUT
   if (argc != 3)
-    argerr(ARG_ERR, argv[0], "not enoguh arguments",
-           "try running help"); // FIXME no --help
-
-  if (atoi(argv[2]) == 0 || atoi(argv[2]) > 100)
+    argerr(ARG_ERR, argv[0], "not enoguh arguments", "try running help");
+  else if (atoi(argv[2]) == 0 || atoi(argv[2]) > 100)
     argerr(ARG_ERR, argv[0], "invalid brightness [1-100]", argv[2]);
 
-  // Declare neccesary variables
+  // INITIALIZE PATH VARS
   char *pre = "/sys/class/backlight/";
   char basepath[MAXPATHLENGTH] = {0};
   char maxpath[MAXPATHLENGTH] = {0};
   char brightpath[MAXPATHLENGTH] = {0};
   strcpy(basepath, pre); // This is safe. PRE is of known length
 
-  // User input, validate length
+  // VALIDATE USER INPUT LENGTH
   strncat(basepath, argv[1], MAXPATHLENGTH - strlen(pre) - 1);
   strncat(maxpath, basepath, MAXPATHLENGTH - 1);
   strncat(brightpath, basepath, MAXPATHLENGTH - 1);
 
-  // Not really safe, but not exploitable either.
-  // Will just crash if length exceeds
-  strcat(maxpath, "/max_brightness");
-  strcat(brightpath, "/brightness");
+  // SET PATHS FOR BACKLIGHT FILE I/O
+  strcat(maxpath,
+         "/max_brightness"); // Not really safe, but not exploitable either.
+  strcat(brightpath, "/brightness"); // Will just crash if length exceeds
 
+  // OPEN FILES FOR I/O
   FILE *m_fp = fopen(maxpath, "r");
   if (m_fp == NULL)
     ferr(OPEN_ERR, argv[0], maxpath, strerror(errno));
@@ -80,15 +115,17 @@ int main(int argc, char *argv[]) {
   if (b_fp == NULL)
     ferr(OPEN_ERR, argv[0], brightpath, strerror(errno));
 
+  // READ MAX BRIGHTNESS
   int m_b;
   assert(0 < fscanf(m_fp, "%d", &m_b));
 
-  // Calculate brightness as a percentage of max
+  // CALCULATE TARGET BRIGHTNESS AS % OF MAX
   if (!fprintf(b_fp, "%d", atoi(argv[2]) * (m_b / 100)))
     ferr(WRITE_ERR, argv[0], brightpath, strerror(errno));
 
-  // Again, these shouldn't really fail, but error handling could be improved
-  assert(0 == fclose(m_fp));
-  assert(0 == fclose(b_fp));
+  // CLOSE FILES
+  assert(0 == fclose(m_fp)); // These shouldn't really fail
+  assert(0 == fclose(b_fp)); // but error handling could be improved
+
   return EXIT_SUCCESS;
 }
