@@ -31,14 +31,15 @@
 /*
  * synopsis: prints some help to the user
  *
- * FIXME no --help parsing
  * TODO consider if the placement of ls is appropriate
+ * TODO documentation, waited because it is not finalized
  * */
-void print_help() {
+void help() {
   printf("Usage: lc <device> <brighness>\n");
   printf("Where brightness is a integer percentage of max(e.g. 1-100)\n");
   printf("#DEVICES#\n");
   system("ls /sys/class/backlight/\n");
+  exit(EXIT_SUCCESS);
 }
 
 /*
@@ -84,6 +85,9 @@ void argerr(char *err, char *argv0, char *errmsg, char *more) {
 
 int main(int argc, char *argv[]) {
   // CHECK INPUT
+  if (argc == 2)
+    if (strcmp(argv[1], help))
+      help();
   if (argc != 3)
     argerr(ARG_ERR, argv[0], "not enoguh arguments", "try running help");
   else if (atoi(argv[2]) == 0 || atoi(argv[2]) > 100)
