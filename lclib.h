@@ -8,6 +8,7 @@
 #include <dirent.h> // For directory listing
 #include <assert.h> // For assert
 #include <linux/limits.h> // For limits
+#include <ddcutil_c_api.h>
 #ifndef NAME_MAX
 #define NAME_MAX 255 // For some reason this fails 4 me,
                      // So i hardcode this
