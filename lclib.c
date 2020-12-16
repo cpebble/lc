@@ -1,4 +1,6 @@
 #include <lclib.h>
+
+
 // TODO Eventually, this will be moved from lc.c
 void ferr(char *err, char *argv0, char *fstr, char *errstr) {
   fprintf(stderr, err, argv0, fstr, errstr);
@@ -39,6 +41,28 @@ int get_device_list(device** out){
         }
     }
     free(sys_class_backlight);
+    // Get list of ddc-displays
+    // see ddcutil/src/sample_clients for better understanding
+    DDCA_Display_Info_List* dlist = NULL;
+    ddca_get_display_info_list2(false, &dlist);
+
+    for(int i = 0; i < dlist->ct; i++){
+        DDCA_Display_Info _dp = dlist->info[i];
+        char* name = calloc(sizeof(char), NAME_MAX + 1);
+        strcpy(name, "DDC: ");
+        strncat(name, _dp.model_name, NAME_MAX - strlen(name));
+        char* id = calloc(sizeof(char), NAME_MAX+1);
+        strcpy(id, _dp.sn);
+        device* new_device = malloc(sizeof(device));
+        new_device->name = name;
+        new_device->d_type = DDCDISPLAY;
+        new_device->id = id;
+        out[n++] = new_device;
+        
+    }
+        
+
+
     return n;
 }
 device* get_device_by_id(char* id){
@@ -73,7 +97,9 @@ void free_device(device* dev){
 
 int get_device_brightness(device* device){
     char* brightpath = malloc(PATH_MAX + 1);
-    int res;
+    DDCA_Display_Info_List* dlist = NULL;
+    DDCA_Display_Handle dh = NULL;
+    int res = -1;
     switch(device->d_type){
         case BUILTIN:
             // Build path
@@ -91,9 +117,27 @@ int get_device_brightness(device* device){
             assert(0 == fclose(b_fp)); // but error handling could be improved
             break;
         case DDCDISPLAY:
-            fprintf(stderr, "How did you even get here??\n");
-            char* hcf = malloc(1);
-            hcf[256] = 'X';
+            // Find display by serial_number
+            ddca_get_display_info_list2(false, &dlist);
+            for(int i = 0; i <= dlist->ct; i++){
+                if (strcmp(dlist->info[i].sn,device->id) == 0){
+                    // open a device handler
+                    ddca_open_display2(dlist->info[i].dref, false, &dh);
+                    // Read a value
+                    DDCA_Non_Table_Vcp_Value valrec;
+                    int ddrcr = ddca_get_non_table_vcp_value(
+                       dh,
+                       0x10,
+                       &valrec);
+                    if (ddrcr != 0){
+                        printf("AAAAAAAH\n");
+                    }
+                    // I cannot believe that this sort of byte-shifting is
+                    // necessary in 2020
+                    uint16_t cur_val = valrec.sh << 8 | valrec.sl;
+                    res = cur_val;
+                }
+            }
             break;
     }
     free(brightpath);
@@ -120,9 +164,8 @@ int get_device_max_brightness(device* device){
             assert(0 == fclose(b_fp));
             break;
         case DDCDISPLAY:
-            fprintf(stderr, "How did you even get here??\n");
-            char* hcf = malloc(1);
-            hcf[256] = 'X';
+            //TODO: 
+            return 0; 
             break;
     }
     free(path);
@@ -149,9 +192,8 @@ int set_device_brightness(device* device, int brightness){
             assert(0 == fclose(b_fp));
             break;
         case DDCDISPLAY:
-            fprintf(stderr, "How did you even get here??\n");
-            char* hcf = malloc(1);
-            hcf[256] = 'X';
+            //TODO: 
+            return 0; 
             break;
     }
     free(path);
