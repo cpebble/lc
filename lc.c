@@ -83,10 +83,15 @@ void argerr(char *err, char *argv0, char *errmsg, char *more) {
 
 int main(int argc, char *argv[]) {
   // CHECK INPUT
-  if (argc == 2)
+  if (argc == 2){
     if ((!(strcmp(argv[1], "--help"))) || (!(strcmp(argv[1], "help"))) ||
         (!(strcmp(argv[1], "-h"))))
       help();
+    else if (!strcmp(argv[1], "-l")) {
+      print_devices();
+      return 0;
+    }
+  }
   if (argc != 3)
     argerr(ARG_ERR, argv[0], "not enough arguments", "try running help");
   else if (atoi(argv[2]) == 0 || atoi(argv[2]) > 100)
