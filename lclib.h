@@ -16,6 +16,7 @@
 
 #define BUILTIN_PATH "/sys/class/backlight"
 #define MAX_DEVICES 12 // Pretty arbitrary, but the struct is like 6 bytes
+#define DDC_BRIGHTNESS_FEATURE 0x10
 // GNU coreutils style, take inspiration from ls
 #define OPEN_ERR "%s: cannot open %s: %s\n"
 #define WRITE_ERR "%s: cannot write %s: %s\n"

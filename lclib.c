@@ -1,6 +1,9 @@
 #include <lclib.h>
 
 
+// This really should be cached and now it is <3
+static DDCA_Display_Info_List* dlist = NULL;
+
 // TODO Eventually, this will be moved from lc.c
 void ferr(char *err, char *argv0, char *fstr, char *errstr) {
   fprintf(stderr, err, argv0, fstr, errstr);
@@ -43,8 +46,9 @@ int get_device_list(device** out){
     free(sys_class_backlight);
     // Get list of ddc-displays
     // see ddcutil/src/sample_clients for better understanding
-    DDCA_Display_Info_List* dlist = NULL;
-    ddca_get_display_info_list2(false, &dlist);
+    if (dlist == NULL){
+        ddca_get_display_info_list2(false, &dlist);
+    }
 
     for(int i = 0; i < dlist->ct; i++){
         DDCA_Display_Info _dp = dlist->info[i];
@@ -97,7 +101,6 @@ void free_device(device* dev){
 
 int get_device_brightness(device* device){
     char* brightpath = malloc(PATH_MAX + 1);
-    DDCA_Display_Info_List* dlist = NULL;
     DDCA_Display_Handle dh = NULL;
     int res = -1;
     switch(device->d_type){
@@ -118,7 +121,8 @@ int get_device_brightness(device* device){
             break;
         case DDCDISPLAY:
             // Find display by serial_number
-            ddca_get_display_info_list2(false, &dlist);
+            if (dlist == NULL)
+                ddca_get_display_info_list2(false, &dlist);
             for(int i = 0; i <= dlist->ct; i++){
                 if (strcmp(dlist->info[i].sn,device->id) == 0){
                     // open a device handler
@@ -127,7 +131,7 @@ int get_device_brightness(device* device){
                     DDCA_Non_Table_Vcp_Value valrec;
                     int ddrcr = ddca_get_non_table_vcp_value(
                        dh,
-                       0x10,
+                       DDC_BRIGHTNESS_FEATURE,
                        &valrec);
                     if (ddrcr != 0){
                         printf("AAAAAAAH\n");
@@ -136,6 +140,7 @@ int get_device_brightness(device* device){
                     // necessary in 2020
                     uint16_t cur_val = valrec.sh << 8 | valrec.sl;
                     res = cur_val;
+                    ddca_close_display(dh);
                 }
             }
             break;
@@ -147,6 +152,7 @@ int get_device_brightness(device* device){
 int get_device_max_brightness(device* device){
     char* path = malloc(PATH_MAX + 1);
     int res;
+    DDCA_Display_Handle dh = NULL;
     switch(device->d_type){
         case BUILTIN:
             // Build path
@@ -164,8 +170,29 @@ int get_device_max_brightness(device* device){
             assert(0 == fclose(b_fp));
             break;
         case DDCDISPLAY:
-            //TODO: 
-            return 0; 
+            // Find display by serial_number
+            if (dlist == NULL)
+                ddca_get_display_info_list2(false, &dlist);
+            for(int i = 0; i <= dlist->ct; i++){
+                if (strcmp(dlist->info[i].sn,device->id) == 0){
+                    // open a device handler
+                    ddca_open_display2(dlist->info[i].dref, false, &dh);
+                    // Read a value
+                    DDCA_Non_Table_Vcp_Value valrec;
+                    int ddrcr = ddca_get_non_table_vcp_value(
+                       dh,
+                       DDC_BRIGHTNESS_FEATURE,
+                       &valrec);
+                    if (ddrcr != 0){
+                        printf("AAAAAAAH\n");
+                    }
+                    // I cannot believe that this sort of byte-shifting is
+                    // necessary in 2020
+                    uint16_t cur_val = valrec.mh << 8 | valrec.ml;
+                    res = cur_val;
+                    ddca_close_display(dh);
+                }
+            }
             break;
     }
     free(path);
@@ -173,6 +200,7 @@ int get_device_max_brightness(device* device){
 }
 int set_device_brightness(device* device, int brightness){
     char* path = malloc(PATH_MAX + 1);
+    DDCA_Display_Handle dh = NULL;
     int res = 0;
     switch(device->d_type){
         case BUILTIN:
@@ -192,8 +220,30 @@ int set_device_brightness(device* device, int brightness){
             assert(0 == fclose(b_fp));
             break;
         case DDCDISPLAY:
-            //TODO: 
-            return 0; 
+            // Find display by serial_number
+            if (dlist == NULL)
+                ddca_get_display_info_list2(false, &dlist);
+            for(int i = 0; i <= dlist->ct; i++){
+                if (strcmp(dlist->info[i].sn,device->id) == 0){
+                    // open a device handler
+                    ddca_open_display2(dlist->info[i].dref, false, &dh);
+                    // Set a value
+                    uint8_t new_sh = brightness >> 8;
+                    uint8_t new_sl = brightness & 0xff;
+                    DDCA_Status ddcrc = ddca_set_non_table_vcp_value(
+                            dh,
+                            DDC_BRIGHTNESS_FEATURE,
+                            new_sh,
+                            new_sl
+                            );
+                    if (ddcrc != 0){
+                        printf("AAAAAAAH\n");
+                    }
+                    // I cannot believe that this sort of byte-shifting is
+                    // necessary in 2020
+                    ddca_close_display(dh);
+                }
+            }
             break;
     }
     free(path);
