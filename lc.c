@@ -14,76 +14,109 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
+
 #define MAXPATHLENGTH 128
 
-#include <assert.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <errno.h>
 
-void print_help(){
-  printf("Usage: lc <device> <brighness>\n");
-  printf("Where brightness is a percentage of max(e.g. 1-100)\n");
-  printf("#DEVICES#\n");
-  system("ls /sys/class/backlight/\n");
+#include <assert.h> // for assert
+#include <errno.h>  // for errno, strerror
+#include <stdio.h>  // for printf, etc...
+#include <stdlib.h> // for EXIT_FAILURE, EXIT_SUCCESS, etc...
+#include <string.h> // for strcat, strcpy
+#include <lclib.h>
+#include <linux/limits.h>
+
+void print_devices(){
+    device** devices = calloc(sizeof(device*), MAX_DEVICES);
+    int n = get_device_list(devices);
+    if (n != 0){
+        for(int i = 0; i < n; i++){
+            printf("[%s]: \n\t%s\n\tCurrent lvl: %d\n\tMax lvl: %d\n", 
+                   devices[i]->name,
+                   devices[i]->id,
+                   get_device_brightness(devices[i]),
+                   get_device_max_brightness(devices[i])
+                  );
+        }
+    } else
+        printf("No devices found\n");
+
+    free_device_list(devices, n);
+    free(devices);
+}
+
+/*
+ * synopsis: prints some help to the user
+ *
+ * TODO consider if the placement of ls is appropriate
+ * TODO documentation, waited because it is not finalized
+ * */
+void help() {
+  fprintf(stderr, "Usage: lc <device> <brighness>\n");
+  fprintf(stderr, "Where brightness is a integer percentage of max(e.g. 1-100)\n");
+  fprintf(stderr, "#DEVICES#\n");
+  print_devices();
+  exit(EXIT_SUCCESS);
+}
+
+
+/*
+ * synopsis:   generic arguments error function
+ *
+ * err:        the error "type"    (char *),
+ * argv0:      the command name    (char *)
+ * errmsg:     the error           (char *)
+ * more:       further information (char *)
+ *
+ * return:     EXIT_FALURE
+ *
+ * desc: Takes a predefined error string (containing formatting for three
+ * strings), and inserts the arguments argv[0] (should be calling command),
+ * errmsg (the error as human readable string), and more (containing a small
+ * tip about the error).Then prints this formatted string to stderr, and exits
+ * with EXIT_FAILURE.
+ */
+void argerr(char *err, char *argv0, char *errmsg, char *more) {
+  fprintf(stderr, ARG_ERR, argv0, errmsg, more);
+  exit(EXIT_FAILURE);
 }
 
 int main(int argc, char *argv[]) {
-  // Reduce complexity by early exit
-  if (argc != 3) {
-    printf("Not enough arguments provided\n");
-    print_help();
-    return EXIT_FAILURE;
+  // CHECK INPUT
+  if (argc == 2){
+    if ((!(strcmp(argv[1], "--help"))) || (!(strcmp(argv[1], "help"))) ||
+        (!(strcmp(argv[1], "-h"))))
+      help();
+    else if (!strcmp(argv[1], "-l")) {
+      print_devices();
+      return 0;
+    }
   }
-  int t_b = atoi(argv[2]);
-  if (t_b == 0 || t_b > 100){
-    printf("Invalid brightness argument\n");
-    print_help();
-    return EXIT_FAILURE;
+  if (argc != 3)
+    argerr(ARG_ERR, argv[0], "not enough arguments", "try running help");
+  else if (atoi(argv[2]) == 0 || atoi(argv[2]) > 100)
+    argerr(ARG_ERR, argv[0], "invalid brightness [1-100]", argv[2]);
+
+  // TRY TO GET DEVICE
+  device* dev = get_device_by_id(argv[1]);
+  if (dev == NULL){
+    fprintf(stderr, "Device \"%s\" not found\nValid devices:", argv[1]);
+    print_devices();
+    return 1;
   }
 
-  char *pre = "/sys/class/backlight/";
-  // Declare neccesary variables
-  char basepath[MAXPATHLENGTH] = {0};
-  char maxpath[MAXPATHLENGTH] = {0};
-  char brightpath[MAXPATHLENGTH] = {0};
-  strcpy(basepath, pre); // This is safe. PRE is of known length
-  // User input, validate length
-  strncat(basepath, argv[1], MAXPATHLENGTH - strlen(pre) - 1);
-  strncat(maxpath, basepath, MAXPATHLENGTH - 1);
-  strncat(brightpath, basepath, MAXPATHLENGTH - 1);
-  // Not really safe, but not exploitable either. Will just crash if length
-  // exceeds
-  strcat(maxpath, "/max_brightness");
-  strcat(brightpath, "/brightness");
+  // READ MAX BRIGHTNESS
+  int m_b = get_device_max_brightness(dev);
+  // CALCULATE TARGET BRIGHTNESS AS % OF MAX
+  // NB: If argv[2] isn't an int, this turns off the screen
+  //     Since this is the provided code, it must be as the author intended
+  //     Git blame == chregon2001
+  //     Yup jeg kalder dig ud b 😘
+  int target = atoi(argv[2]) * (m_b / 100);
 
-  FILE *m_fp = fopen(maxpath, "r");
-  if (m_fp == NULL){// Probably permissions error
-    printf("Error in open Max file[%s]: %s\n",
-           maxpath,
-           strerror(errno)
-           );
-    return errno;
-  }
-  FILE *b_fp = fopen(brightpath, "w");
-  if (b_fp == NULL){// Probably permissions error
-    printf("Error in open brightness file: %s\n", strerror(errno));
-    return errno;
-  }
+  set_device_brightness(dev, target);
+  free_device(dev);
 
-  int m_b;
-  assert(0 < fscanf(m_fp, "%d", &m_b));
-  // Calculate brightness as a percentage of max
-  int calculated_brightness = t_b * (m_b / 100);
-  int err = fprintf(b_fp, "%d", calculated_brightness);
-  if (err == 0){
-    printf("Error in writing brightness file: %s\n", strerror(errno));
-    return EXIT_FAILURE;
-  }
-  // Again, these shouldn't really fail, but error handling could be improved
-  assert(0 == fclose(m_fp));
-  assert(0 == fclose(b_fp));
   return EXIT_SUCCESS;
 }
-// vim: noai:ts=2:sw=2
+// vim: expandtab:ts=2:sw=2
