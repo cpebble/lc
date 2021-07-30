@@ -25,6 +25,7 @@
 #include <lclib.h>
 #include <linux/limits.h>
 
+
 void print_devices(){
     device** devices = calloc(sizeof(device*), MAX_DEVICES);
     int n = get_device_list(devices);
@@ -80,6 +81,8 @@ void argerr(char *err, char *argv0, char *errmsg, char *more) {
   exit(EXIT_FAILURE);
 }
 
+int isRelative = 0;
+
 int main(int argc, char *argv[]) {
   // CHECK INPUT
   if (argc == 2){
@@ -93,6 +96,9 @@ int main(int argc, char *argv[]) {
   }
   if (argc != 3)
     argerr(ARG_ERR, argv[0], "not enough arguments", "try running help");
+  else if (argv[2][0] == '-' || argv[2][0] == '+'){
+    isRelative = 1;
+  }
   else if (atoi(argv[2]) == 0 || atoi(argv[2]) > 100)
     argerr(ARG_ERR, argv[0], "invalid brightness [1-100]", argv[2]);
 
@@ -108,10 +114,24 @@ int main(int argc, char *argv[]) {
   int m_b = get_device_max_brightness(dev);
   // CALCULATE TARGET BRIGHTNESS AS % OF MAX
   // NB: If argv[2] isn't an int, this turns off the screen
-  //     Since this is the provided code, it must be as the author intended
-  //     Git blame == chregon2001
-  //     Yup jeg kalder dig ud b 😘
-  int target = atoi(argv[2]) * (m_b / 100);
+  int target = 512;
+  if (isRelative){
+    int d_b = get_device_brightness(dev);
+    float target_p = ((d_b*1.0f / m_b)*100) + atoi(argv[2]);
+    if (target_p > 100.0f) 
+      target_p = 100.0f;
+    else if (target_p < 1.0f)
+      target_p = 1.0f;
+    //printf("rel: %f, %d %d\n", target_p, d_b, (m_b));
+    target = target_p * (m_b/100);
+    //printf("rel: %d\n", atoi(argv[2]));
+    //printf("rel: %d\n", atoi(&(argv[2][1])));
+  }
+  else
+    target = atoi(argv[2]) * (m_b / 100);
+  printf("%d\n", target);
+
+    
 
   set_device_brightness(dev, target);
   free_device(dev);
