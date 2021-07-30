@@ -8,7 +8,10 @@
 #include <dirent.h> // For directory listing
 #include <assert.h> // For assert
 #include <linux/limits.h> // For limits
+#ifdef DDC_SUPPORT
 #include <ddcutil_c_api.h>
+#endif
+
 #ifndef NAME_MAX
 #define NAME_MAX 255 // For some reason this fails 4 me,
                      // So i hardcode this
@@ -25,7 +28,9 @@
 // This will enable us to use both vcp panels and laptop panels
 typedef enum display_type {
     BUILTIN,
+#ifdef DDC_SUPPORT
     DDCDISPLAY
+#endif
 } display_type;
 
 typedef struct device {

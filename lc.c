@@ -17,7 +17,6 @@
 
 #define MAXPATHLENGTH 128
 
-
 #include <assert.h> // for assert
 #include <errno.h>  // for errno, strerror
 #include <stdio.h>  // for printf, etc...
