@@ -1,8 +1,10 @@
 #include <lclib.h>
 
 
+#ifdef DDC_SUPPORT
 // This really should be cached and now it is <3
 static DDCA_Display_Info_List* dlist = NULL;
+#endif
 
 // TODO Eventually, this will be moved from lc.c
 void ferr(char *err, char *argv0, char *fstr, char *errstr) {
@@ -44,6 +46,7 @@ int get_device_list(device** out){
         }
     }
     free(sys_class_backlight);
+#ifdef DDC_SUPPORT
     // Get list of ddc-displays
     // see ddcutil/src/sample_clients for better understanding
     if (dlist == NULL){
@@ -64,6 +67,7 @@ int get_device_list(device** out){
         out[n++] = new_device;
         
     }
+#endif
         
 
 
@@ -101,7 +105,9 @@ void free_device(device* dev){
 
 int get_device_brightness(device* device){
     char* brightpath = malloc(PATH_MAX + 1);
+#ifdef DDC_SUPPORT
     DDCA_Display_Handle dh = NULL;
+#endif
     int res = -1;
     switch(device->d_type){
         case BUILTIN:
@@ -119,6 +125,7 @@ int get_device_brightness(device* device){
 
             assert(0 == fclose(b_fp)); // but error handling could be improved
             break;
+#ifdef DDC_SUPPORT
         case DDCDISPLAY:
             // Find display by serial_number
             if (dlist == NULL)
@@ -144,6 +151,7 @@ int get_device_brightness(device* device){
                 }
             }
             break;
+#endif
     }
     free(brightpath);
 
@@ -152,7 +160,9 @@ int get_device_brightness(device* device){
 int get_device_max_brightness(device* device){
     char* path = malloc(PATH_MAX + 1);
     int res;
+#ifdef DDC_SUPPORT
     DDCA_Display_Handle dh = NULL;
+#endif
     switch(device->d_type){
         case BUILTIN:
             // Build path
@@ -169,6 +179,7 @@ int get_device_max_brightness(device* device){
 
             assert(0 == fclose(b_fp));
             break;
+#ifdef DDC_SUPPORT
         case DDCDISPLAY:
             // Find display by serial_number
             if (dlist == NULL)
@@ -194,13 +205,16 @@ int get_device_max_brightness(device* device){
                 }
             }
             break;
+#endif
     }
     free(path);
     return res;
 }
 int set_device_brightness(device* device, int brightness){
     char* path = malloc(PATH_MAX + 1);
+#ifdef DDC_SUPPORT
     DDCA_Display_Handle dh = NULL;
+#endif
     int res = 0;
     switch(device->d_type){
         case BUILTIN:
@@ -219,6 +233,7 @@ int set_device_brightness(device* device, int brightness){
 
             assert(0 == fclose(b_fp));
             break;
+#ifdef DDC_SUPPORT
         case DDCDISPLAY:
             // Find display by serial_number
             if (dlist == NULL)
@@ -245,6 +260,7 @@ int set_device_brightness(device* device, int brightness){
                 }
             }
             break;
+#endif
     }
     free(path);
     return res;

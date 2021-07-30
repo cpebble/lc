@@ -1,7 +1,11 @@
 
 CC=gcc
 # If we build with ddc
-CFLAGS=-Og -g -march=native -std=c11 -Wall -Wno-stringop-truncation -I. -lddcutil
+ifeq ($(DDC_SUPPORT),1)
+	CFLAGS=-Og -g -march=native -std=c11 -Wall -Wno-stringop-truncation -I. -lddcutil -D DDC_SUPPORT
+else
+	CFLAGS=-Og -g -march=native -std=c11 -Wall -Wno-stringop-truncation -I.
+endif
 # else
 # CFLAGS=-Og -g -march=native -std=c11 -Wall -Wno-stringop-truncation -I.
 
