@@ -13,7 +13,7 @@ $ lc --help
 #+end_src
 To set the target brightness (as an integer).
 #+begin_src
-# lc device brightness
+# lc [device] brightness
 #+end_src
 *Finding devices*: lc will tell you the names of devices on help,
 but if you would like to find it yourself, simply run:
@@ -31,7 +31,8 @@ $ make
 ** INSTALL
 Simply put the =lc= file into your path, or a folder in your path.
 ** ROADMAP
-- [ ] Down the road, lc looks to support ddcutils,
-  so it can change desktop monitors as well.
+- [x] Down the road, lc looks to support ddcutils,
+  so it can change desktop monitors as well. DONE: build with relevant flag
+- [ ] Handling command-line arguments a lot better. 
   
 
