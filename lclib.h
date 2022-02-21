@@ -56,7 +56,9 @@ typedef struct device {
  *              afterwards
  */
 int get_device_list(device** out);
-device* get_device_by_id(char* id);
+int get_device_by_id(char* id, device** device);
+int get_device_by_index(int i, device** device);
+
 
 
 /*

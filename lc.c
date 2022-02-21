@@ -1,5 +1,6 @@
 /* lc - light command: a brightness setter
  * Copyright (C) 2020 - 2020  Christian Egon Sørensen
+ * Copyright (C) 2021 - 2022  Christian Påbøl Jacobsen
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -82,6 +83,7 @@ void argerr(char *err, char *argv0, char *errmsg, char *more) {
 }
 
 int isRelative = 0;
+int index_num_arg = 2;
 
 int main(int argc, char *argv[]) {
   // CHECK INPUT
@@ -94,21 +96,38 @@ int main(int argc, char *argv[]) {
       return 0;
     }
   }
-  if (argc != 3)
-    argerr(ARG_ERR, argv[0], "not enough arguments", "try running help");
-  else if (argv[2][0] == '-' || argv[2][0] == '+'){
-    isRelative = 1;
-  }
-  else if (atoi(argv[2]) == 0 || atoi(argv[2]) > 100)
-    argerr(ARG_ERR, argv[0], "invalid brightness [1-100]", argv[2]);
-
-  // TRY TO GET DEVICE
-  device* dev = get_device_by_id(argv[1]);
-  if (dev == NULL){
-    fprintf(stderr, "Device \"%s\" not found\nValid devices:", argv[1]);
-    print_devices();
+  if (argc < 2){
+    fprintf(stderr, "Not enough arguments\n");
     return 1;
   }
+  if (argc >= 4)
+    argerr(ARG_ERR, argv[0], "too many arguments", "try running -help");
+
+  // TRY TO GET DEVICE
+  device* dev;
+  int unused;
+  // No device was provided
+  if (sscanf(argv[1], "%d", &unused) == 1){
+    // Get ind
+    int succ = get_device_by_index(0, &dev);
+    if(!succ)
+      argerr(ARG_ERR, argv[0], "No devices found, do you have a screen?\n", "");
+
+    fprintf(stderr, "Device not given. Using default device %s\n", dev->name);
+    index_num_arg = 1;
+  }
+  else if (!get_device_by_id(argv[1], &dev)) {
+    // This works since if this also fails, &dev is null and we fail, but if it succeeds, 
+    // dev is set properly
+    argerr(ARG_ERR, argv[0], "Invalid device id", argv[1]);
+  }
+
+  // Handle Number arg
+  if (argv[index_num_arg][0] == '-' || argv[index_num_arg][0] == '+'){
+    isRelative = 1;
+  }
+  else if (atoi(argv[index_num_arg]) == 0 || atoi(argv[index_num_arg]) > 100)
+    argerr(ARG_ERR, argv[0], "invalid brightness [1-100]", argv[index_num_arg]);
 
   // READ MAX BRIGHTNESS
   int m_b = get_device_max_brightness(dev);
@@ -122,13 +141,10 @@ int main(int argc, char *argv[]) {
       target_p = 100.0f;
     else if (target_p < 1.0f)
       target_p = 1.0f;
-    //printf("rel: %f, %d %d\n", target_p, d_b, (m_b));
     target = target_p * (m_b/100);
-    //printf("rel: %d\n", atoi(argv[2]));
-    //printf("rel: %d\n", atoi(&(argv[2][1])));
   }
   else
-    target = atoi(argv[2]) * (m_b / 100);
+    target = atoi(argv[index_num_arg]) * (m_b / 100);
   printf("%d\n", target);
 
     

@@ -10,8 +10,10 @@ endif
 # CFLAGS=-Og -g -march=native -std=c11 -Wall -Wno-stringop-truncation -I.
 
 LIBS = lclib.h
-OBJS = lc.o lclib.o
+OBJS = lclib.o lc.o # Shouldn't need to recompile lc.o
 MAIN = lc.c
+
+phony: lc
 
 
 %.o: %.c $(LIBS) #libs = objects confirmed
