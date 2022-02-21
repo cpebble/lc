@@ -73,17 +73,33 @@ int get_device_list(device** out){
 
     return n;
 }
-device* get_device_by_id(char* id){
-    device* res = 0x0;
+int get_device_by_id(char* id, device** dev){
+    int res = 0;
     device* list[MAX_DEVICES];
     int n = get_device_list(list);
     for(int i = 0; i < n; i++){
-        if (strcmp(id, list[i]->id) == 0)
-            res = list[i];
+        if (strcmp(id, list[i]->id) == 0){
+            res = 1;
+            *dev = list[i];
+        }
         else
             free_device(list[i]);
     }
-
+    return res;
+}
+int get_device_by_index(int x, device** dev){
+    int res = 0;
+    device* list[MAX_DEVICES];
+    int n = get_device_list(list);
+    for(int i = 0; i < n; i++){
+        if (i == x){
+            *dev = list[i];
+            res = 1;
+        }
+        else {
+            free_device(list[i]);
+        }
+    }
     return res;
 }
 
