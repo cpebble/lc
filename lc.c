@@ -136,7 +136,7 @@ int main(int argc, char *argv[]) {
   int target = 512;
   if (isRelative){
     int d_b = get_device_brightness(dev);
-    float target_p = ((d_b*1.0f / m_b)*100) + atoi(argv[2]);
+    float target_p = ((d_b*1.0f / m_b)*100) + atoi(argv[index_num_arg]);
     if (target_p > 100.0f) 
       target_p = 100.0f;
     else if (target_p < 1.0f)
